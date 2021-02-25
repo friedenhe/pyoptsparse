@@ -204,6 +204,20 @@ class IPOPT(Optimizer):
             # Define the 4 call back functions that ipopt needs:
             def eval_f(x, user_data=None):
                 fobj, fail = self._masterFunc(x, ["fobj"])
+
+                # Fail flag hack for IPOPT
+                # IPOPT does not have a mechanism to handle a fail flag, it may
+                # cause issues, e.g., when we have negative volume mesh during a
+                # line search, the optimizer should backtrack the step and ignore
+                # whatever fobj value that is computed by the masterFunc function.
+                # Here is a hack to mimic the effect of a fail flag.
+                # Essentially, if masterFunc returns fail == True, we overwrite
+                # whatever objective function computed by the masterFunc with a very
+                # large value. This will force the optimizer to backtrack during the
+                # line search.
+                if fail is True:
+                    fobj = 1e16
+
                 return fobj
 
             def eval_g(x, user_data=None):

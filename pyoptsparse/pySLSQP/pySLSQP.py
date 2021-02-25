@@ -172,6 +172,20 @@ class SLSQP(Optimizer):
             # =================================================================
             def slfunc(m, me, la, n, f, g, x):
                 fobj, fcon, fail = self._masterFunc(x, ["fobj", "fcon"])
+
+                # Fail flag hack for SLSQP
+                # SLSQP does not have a mechanism to handle a fail flag, it may
+                # cause issues, e.g., when we have negative volume mesh during a
+                # line search, the optimizer should backtrack the step and ignore
+                # whatever fobj value that is computed by the masterFunc function.
+                # Here is a hack to mimic the effect of a fail flag.
+                # Essentially, if the masterFunc returns fail == True, we overwrite
+                # whatever objective function computed by the masterFunc with a very
+                # large value. This will force the optimizer to backtrack during the
+                # line search.
+                if fail is True:
+                    fobj = 1e16
+                    
                 f = fobj
                 g[0:m] = -fcon
                 slsqp.pyflush(self.getOption("IOUT"))
